@@ -36,13 +36,13 @@ services:
       - -a=:31478
       - -c=/var/lib/derper/derper.key
       - -stun-port=3478
-      - -verify-clients
+      # - -verify-clients
     ports:
-      - 127.0.0.1:31478:31478/tcp
+      - 31478:31478/tcp
       - 3478:3478/udp
     volumes:
       - ./data:/var/lib/derper  # optional, see "Key file"
-      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
+      # - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
