@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", ":semanticCommits"],
+  "labels": ["dependencies"],
+  "platformAutomerge": false,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Upstream Tailscale version pinned via ARG in the Dockerfile",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+=(?<currentValue>\\S+)"
+      ],
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Tailscale: stable releases only (even minor numbers)",
+      "matchDepNames": ["tailscale/tailscale"],
+      "allowedVersions": "/^\\d+\\.\\d*[02468]\\.\\d+$/",
+      "semanticCommitType": "feat",
+      "semanticCommitScope": "derper"
+    },
+    {
+      "description": "Automerge everything non-major once CI (build + smoke test) is green",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest", "pinDigest"],
+      "automerge": true
+    }
+  ]
+}

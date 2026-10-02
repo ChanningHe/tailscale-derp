@@ -1,0 +1,127 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PLATFORMS: linux/amd64,linux/arm64
+  # Publish only from main; PRs and other branches build + test only.
+  PUBLISH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+  # Put OCI annotations on both the per-arch manifests and the multi-arch index.
+  DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+jobs:
+  build:
+    name: build (${{ matrix.variant }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: default
+            target: runtime
+            suffix: ""
+          - variant: debug
+            target: runtime-debug
+            suffix: -debug
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read upstream version
+        id: version
+        run: |
+          version="$(sed -n 's/^ARG TAILSCALE_VERSION=//p' Dockerfile)"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=Dockerfile::invalid TAILSCALE_VERSION '${version}'"
+            exit 1
+          fi
+          {
+            echo "full=${version}"
+            echo "minor=${version%.*}"
+            echo "image=ghcr.io/${GITHUB_REPOSITORY,,}"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ steps.version.outputs.image }}
+          flavor: |
+            latest=false
+            suffix=${{ matrix.suffix }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.full }}
+            type=raw,value=${{ steps.version.outputs.minor }}
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=derper
+            org.opencontainers.image.description=Tailscale DERP relay server (rootless, distroless)
+            org.opencontainers.image.version=${{ steps.version.outputs.full }}
+          annotations: |
+            org.opencontainers.image.title=derper
+            org.opencontainers.image.description=Tailscale DERP relay server (rootless, distroless)
+            org.opencontainers.image.version=${{ steps.version.outputs.full }}
+
+      # Final stages contain no RUN, so only the native platform can be loaded and executed here;
+      # the arm64 binary comes from the same cross-compile step.
+      - name: Build for smoke test
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          load: true
+          tags: derper:smoke
+          cache-from: type=gha,scope=${{ matrix.variant }}
+
+      - name: Smoke test
+        run: ./scripts/smoke-test.sh derper:smoke
+
+      - name: Log in to GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          target: ${{ matrix.target }}
+          platforms: ${{ env.PLATFORMS }}
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.variant }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
+
+      - name: Attest build provenance
+        if: env.PUBLISH == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.version.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

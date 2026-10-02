@@ -1,0 +1,2 @@
+# The build fetches sources via `go install`; nothing from the context is needed.
+*
