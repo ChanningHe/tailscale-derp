@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 
 # renovate: datasource=github-releases depName=tailscale/tailscale
-ARG TAILSCALE_VERSION=1.102.5
+ARG TAILSCALE_VERSION=1.104.1
 
 # Build on the native platform and cross-compile: no QEMU, no RUN in final stages.
 FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS build
