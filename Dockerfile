@@ -45,7 +45,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     done
 
 # Debug variant: distroless + busybox shell.
-FROM gcr.io/distroless/static-debian13:debug-nonroot@sha256:95edb51e0d0fc20b21e50ddcf747338172aea87874f66a6a6bce1275367ccdc1 AS runtime-debug
+FROM gcr.io/distroless/static-debian13:debug-nonroot@sha256:06bfc1ed6f52f8efecd4e68e5f146fc06891b1c40f2d1654f1518392ba89815a AS runtime-debug
 
 COPY --from=build /out/derper /usr/local/bin/derper
 COPY --from=build /out/licenses /usr/share/licenses/derper
