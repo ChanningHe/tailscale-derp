@@ -60,7 +60,7 @@ ENTRYPOINT ["/usr/local/bin/derper"]
 CMD ["-a", ":31478", "-stun-port", "3478", "-c", "/var/lib/derper/derper.key"]
 
 # Default variant: distroless, no shell. Must stay the last stage.
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:516757106de35205efb70b91ba03f6f1298424a0678c603255cf2852a7000087 AS runtime
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:d62067879de890a1def9da0e7766b7d20810a5e5555cef8506b752437d7a3e88 AS runtime
 
 COPY --from=build /out/derper /usr/local/bin/derper
 COPY --from=build /out/licenses /usr/share/licenses/derper
