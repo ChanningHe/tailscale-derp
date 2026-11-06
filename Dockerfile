@@ -4,7 +4,7 @@
 ARG TAILSCALE_VERSION=1.104.5
 
 # Build on the native platform and cross-compile: no QEMU, no RUN in final stages.
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS build
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
